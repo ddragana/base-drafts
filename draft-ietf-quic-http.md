@@ -198,8 +198,7 @@ This amounts to the second least-significant bit differentiating the two streams
 in a request.
 
 The lower-numbered stream is called the message control stream and carries
-frames related to the request/response, including HEADERS. All request control
-streams are exempt from connection-level flow control. The higher-numbered
+frames related to the request/response, including HEADERS. The higher-numbered
 stream is the data stream and carries the request/response body with no
 additional framing. Note that a request or response without a body will cause
 this stream to be half-closed in the corresponding direction without
@@ -229,29 +228,30 @@ HTTP response on the same streams as the request.
 
 An HTTP message (request or response) consists of:
 
-1. for a response only, zero or more header blocks (a sequence of HEADERS frames
-   with End Header Block set on the last) on the control stream containing the
-   message headers of informational (1xx) HTTP responses (see {{!RFC7230}},
-   Section 3.2 and {{!RFC7231}}, Section 6.2),
+1. one header block (see {{frame-headers}}) on the control stream containing the
+   message headers (see {{!RFC7230}}, Section 3.2),
 
-2. one header block on the control stream containing the message headers (see
-   {{!RFC7230}}, Section 3.2),
+2. the payload body (see {{!RFC7230}}, Section 3.3), sent on the data stream,
 
-3. the payload body (see {{!RFC7230}}, Section 3.3), sent on the data stream,
-
-4. optionally, one header block on the control stream containing the
+3. optionally, one header block on the control stream containing the
    trailer-part, if present (see {{!RFC7230}}, Section 4.1.2).
+
+In addition, prior to sending the message header block indicated above, a
+response may contain zero or more header blocks on the control stream containing
+the message headers of informational (1xx) HTTP responses (see {{!RFC7230}},
+Section 3.2 and {{!RFC7231}}, Section 6.2).
 
 The data stream MUST be half-closed immediately after the transfer of the body.
 If the message does not contain a body, the corresponding data stream MUST still
 be half-closed without transferring any data. The "chunked" transfer encoding
 defined in Section 4.1 of {{!RFC7230}} MUST NOT be used.
 
-Trailing header fields are carried in a header block following the body. Such a
-header block is a sequence of HEADERS frames with End Header Block set on the
-last frame. Header blocks after the first but before the end of the stream are
-invalid. These MUST be decoded to maintain HPACK decoder state, but the
-resulting output MUST be discarded.
+Trailing header fields are carried in an additional header block on the message
+control stream. Such a header block is a sequence of HEADERS frames with End
+Header Block set on the last frame. Senders MUST send only one header block in
+the trailers section; receivers MUST decode any subsequent header blocks in
+order to maintain HPACK decoder state, but the resulting output MUST be
+discarded.
 
 An HTTP request/response exchange fully consumes a pair of streams. After
 sending a request, a client closes the streams for sending; after sending a
@@ -732,31 +732,6 @@ TODOs:
    field in this case.
  - No CONTINUATION -- HEADERS have EHB; do we need it here?
 
-
-### PING
-
-PING frames do not exist, since QUIC provides equivalent functionality. Frame
-type 0x6 is reserved.
-
-
-### GOAWAY frame
-
-GOAWAY frames do not exist, since QUIC provides equivalent functionality. Frame
-type 0x7 is reserved.
-
-
-### WINDOW_UPDATE frame
-
-WINDOW_UPDATE frames do not exist, since QUIC provides equivalent functionality.
-Frame type 0x8 is reserved.
-
-
-### CONTINUATION frame
-
-CONTINUATION frames do not exist, since larger supported HEADERS/PUSH_PROMISE
-frames provide equivalent functionality. Frame type 0x9 is reserved.
-
-
 ### SETTINGS_ACK Frame {#frame-settings-ack}
 
 The SETTINGS_ACK frame (id = 0x0b) acknowledges receipt and application
@@ -799,6 +774,30 @@ HTTP_MALFORMED_SETTINGS_ACK.
 On the connection control stream, the SETTINGS_ACK frame MUST have a length
 which is a multiple of two octets. A SETTINGS_ACK frame of any other length MUST
 be treated as a connection error of type HTTP_MALFORMED_SETTINGS_ACK.
+
+### PING
+
+PING frames do not exist, since QUIC provides equivalent functionality. Frame
+type 0x6 is reserved.
+
+
+### GOAWAY frame
+
+GOAWAY frames do not exist, since QUIC provides equivalent functionality. Frame
+type 0x7 is reserved.
+
+
+### WINDOW_UPDATE frame
+
+WINDOW_UPDATE frames do not exist, since QUIC provides equivalent functionality.
+Frame type 0x8 is reserved.
+
+
+### CONTINUATION frame
+
+CONTINUATION frames do not exist, since larger supported HEADERS/PUSH_PROMISE
+frames provide equivalent functionality. Frame type 0x9 is reserved.
+
 
 
 # Error Handling {#errors}
@@ -849,16 +848,16 @@ HTTP_MALFORMED_HEADERS (0x09):
 : A HEADERS frame has been received with an invalid format.
 
 HTTP_MALFORMED_PRIORITY (0x0A):
-: A HEADERS frame has been received with an invalid format.
+: A PRIORITY frame has been received with an invalid format.
 
 HTTP_MALFORMED_SETTINGS (0x0B):
-: A HEADERS frame has been received with an invalid format.
+: A SETTINGS frame has been received with an invalid format.
 
 HTTP_MALFORMED_PUSH_PROMISE (0x0C):
-: A HEADERS frame has been received with an invalid format.
+: A PUSH_PROMISE frame has been received with an invalid format.
 
 HTTP_MALFORMED_SETTINGS_ACK (0x0D):
-: A HEADERS frame has been received with an invalid format.
+: A SETTINGS_ACK frame has been received with an invalid format.
 
 HTTP_INTERRUPTED_HEADERS (0x0E):
 : A HEADERS frame without the End Header Block flag was followed by a frame
