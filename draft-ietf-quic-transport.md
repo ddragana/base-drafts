@@ -1029,23 +1029,22 @@ The fields in the WINDOW_UPDATE frame are as follows:
 
 An endpoint may use a REQUEST_RST frame (type=0x08) to request a peer to
 abruptly terminate a stream.  The frame is as follows:
-
 ~~~
  0                   1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                        Stream ID (32)                         |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                        Error Code (32)                        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                        Stream ID (32)                         |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ~~~
 
 The fields are:
 
-* Stream ID: The 32-bit Stream ID of the stream to be terminated.
-
 * Error code: A 32-bit error code which indicates why the stream should be
   closed.
+
+* Stream ID: The 32-bit Stream ID of the stream being terminated.
 
 ## Connection Frames {#frames-connection}
 
@@ -1258,114 +1257,7 @@ The STOP_WAITING frame contains a single field:
   to be irrecoverably lost and MUST NOT report those packets as missing in
   subsequent acks.
 
-## WINDOW_UPDATE Frame {#frame-window-update}
-
-The WINDOW_UPDATE frame (type=0x04) informs the peer of an increase in an
-endpoint's flow control receive window. The Stream ID can be zero, indicating
-this WINDOW_UPDATE applies to the connection level flow control window, or
-non-zero, indicating that the specified stream should increase its flow control
-window. The frame is as follows:
-
-~~~
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                        Stream ID (32)                         |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                                                               |
-+                        Byte Offset (64)                       +
-|                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-~~~
-
-The fields in the WINDOW_UPDATE frame are as follows:
-
-* Stream ID: ID of the stream whose flow control windows is being updated, or 0
-  to specify the connection-level flow control window.
-
-* Byte offset: A 64-bit unsigned integer indicating the absolute byte offset of
-  data which can be sent on the given stream.  In the case of connection level
-  flow control, the cumulative number of bytes which can be sent on all
-  currently open streams.
-
-## BLOCKED Frame {#frame-blocked}
-
-A sender sends a BLOCKED frame (type=0x05) when it is ready to send data (and
-has data to send), but is currently flow control blocked. BLOCKED frames are
-purely informational frames, but extremely useful for debugging purposes. A
-receiver of a BLOCKED frame should simply discard it (after possibly printing a
-helpful log message). The frame is as follows:
-
-~~~
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                        Stream ID (32)                         |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-~~~
-
-The BLOCKED frame contains a single field:
-
-* Stream ID: A 32-bit unsigned number indicating the stream which is flow
-  control blocked.  A non-zero Stream ID field specifies the stream that is flow
-  control blocked.  When zero, the Stream ID field indicates that the connection
-  is flow control blocked.
-
-
-## RST_STREAM Frame {#frame-rst-stream}
-
-An endpoint may use a RST_STREAM frame (type=0x01) to abruptly terminate
-transmission on a stream.  The frame is as follows:
-
-~~~
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                        Stream ID (32)                         |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                                                               |
-+                        Byte Offset (64)                       +
-|                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                        Error Code (32)                        |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-~~~
-
-The fields are:
-
-* Stream ID: The 32-bit Stream ID of the stream being terminated.
-
-* Byte offset: A 64-bit unsigned integer indicating the absolute byte offset of
-  the end of data written on this stream by the RST_STREAM sender.
-
-* Error code: A 32-bit error code which indicates why the stream is being
-  closed.
-
-
-## REQUEST_RST Frame {#frame-request-rst}
-
-An endpoint may use a REQUEST_RST frame (type=0x08) to request a peer to
-abruptly terminate transmission on a stream.  The frame is as follows:
-
-~~~
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                        Error Code (32)                        |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                        Stream ID (32)                         |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-~~~
-
-The fields are:
-
-* Error code: A 32-bit error code which indicates why the stream should be
-  closed.
-
-* Stream ID: The 32-bit Stream ID of the stream being terminated.
-
-
-## PADDING Frame {#frame-padding}
+### PADDING Frame {#frame-padding}
 
 The PADDING frame (type=0x00) pads a packet with 0x00 bytes. When this frame is
 encountered, the rest of the packet is expected to be padding bytes. The frame
