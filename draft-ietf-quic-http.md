@@ -204,8 +204,7 @@ and the least-significant bit differentiating the two streams in the request.
 Clients MUST NOT open streams with IDs allocated for server push.
 
 The lower-numbered stream is called the message control stream and carries
-frames related to the request/response, including HEADERS. All message control
-streams are exempt from connection-level flow control. The higher-numbered
+frames related to the request/response, including HEADERS. The higher-numbered
 stream is the data stream and carries the request/response body with no
 additional framing. Note that a request or response without a body will cause
 this stream to be closed without transferring data.
@@ -851,16 +850,16 @@ HTTP_MALFORMED_HEADERS (0x09):
 : A HEADERS frame has been received with an invalid format.
 
 HTTP_MALFORMED_PRIORITY (0x0A):
-: A HEADERS frame has been received with an invalid format.
+: A PRIORITY frame has been received with an invalid format.
 
 HTTP_MALFORMED_SETTINGS (0x0B):
-: A HEADERS frame has been received with an invalid format.
+: A SETTINGS frame has been received with an invalid format.
 
 HTTP_MALFORMED_PUSH_PROMISE (0x0C):
-: A HEADERS frame has been received with an invalid format.
+: A PUSH_PROMISE frame has been received with an invalid format.
 
 HTTP_MALFORMED_SETTINGS_ACK (0x0D):
-: A HEADERS frame has been received with an invalid format.
+: A SETTINGS_ACK frame has been received with an invalid format.
 
 HTTP_INTERRUPTED_HEADERS (0x0E):
 : A HEADERS frame without the End Header Block flag was followed by a frame
