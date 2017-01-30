@@ -681,7 +681,7 @@ the document.
 
 The transport component of the handshake is responsible for exchanging and
 negotiating the following parameters for a QUIC connection.  Not all parameters
-are negotiated, some parameters are sent in just one direction.  These
+are negotiated; some parameters are sent in just one direction.  These
 parameters and options are encoded and handed off to the crypto handshake
 protocol to be transmitted to the peer.
 
@@ -1182,7 +1182,7 @@ receive times relative to the beginning of the connection.
 +-+-+-+-+-+-+-+-+
 | [Delta LA (8)]|
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                [First Timestamp (32)]                         |
+|                    [First Timestamp (32)]                     |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |[Delta LA 1(8)]| [Time Since Previous 1 (16)]  |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -1495,10 +1495,12 @@ receiving peer ({{flow-control}}).
 
 From this state, the sender send a STREAM frame with the FIN flag set or a
 RST_STREAM frame.  These indicate the clean or abrupt termination of data flow
-on the stream, respectively.  In either case, this causes the stream to
-transition into the "closed" state. The receiving endpoint MUST NOT process the
-FIN flag until all preceding data on the stream has been received, but MAY
-process a RST_STREAM frame immediately and discard any preceding data.
+on the stream, respectively.
+
+An endpoint receiving a FIN flag considers the stream state to be "closed" once
+all preceding data on the stream has been received. An endpoint receiving a
+RST_STREAM frame considers the stream state to be "closed" immediately; any
+preceding data MAY be discarded.
 
 ### closed
 
@@ -1510,6 +1512,24 @@ A final offset is present in both a STREAM frame bearing a FIN flag and in a
 RST_STREAM frame.  If a STREAM frame carrying data beyond the received final
 offset is received, the receiving endpoint MUST close the connection with a
 QUIC_STREAM_DATA_AFTER_TERMINATION error ({{error-handling}}).
+
+## Solicited State Transitions
+
+If an endpoint is no longer interested in the data being received, it MAY send a
+REQUEST_RST frame on an incoming stream in the "open" state to request closure
+of the stream in the opposite direction.  This typically indicates that the
+receiving application is no longer reading from the stream and all future data
+will be discarded upon receipt.
+
+STREAM frames received after sending REQUEST_RST are still counted toward the
+connection and stream flow-control windows.  Even though these frames will be
+discarded, because they are sent before their sender receives the REQUEST_RST,
+the sender will consider the frames to count against its flow-control windows.
+
+Upon receipt of a REQUEST_RST frame, an endpoint SHOULD send a RST_STREAM with
+an error code of QUIC_RECEIVED_RST.  If the REQUEST_RST frame is received on a
+stream that is already in the "closed" state, a RST_STREAM frame SHOULD still be
+sent and retransmission of previously-sent STREAM frames SHOULD be cancelled.
 
 ## Stream Identifiers {#stream-identifiers}
 
@@ -1562,16 +1582,10 @@ as an ordered byte-stream.  Data received out of order MUST be buffered for
 later delivery, as long as it is not in violation of the receiver's flow control
 limits.
 
-An endpoint MUST NOT send any stream data without consulting the congestion
-controller and the flow controller, with the following two exceptions.
-
-* The crypto handshake stream, Stream 1, MUST NOT be subject to congestion
-  control or connection-level flow control, but MUST be subject to stream-level
-  flow control.
-
-* An application MAY exclude specific stream IDs from connection-level flow
-  control.  If so, these streams MUST NOT be subject to connection-level flow
-  control.
+The crypto handshake stream, Stream 1, MUST NOT be subject to congestion control
+or connection-level flow control, but MUST be subject to stream-level flow
+control. An endpoint MUST NOT send data on any other stream without consulting
+the congestion controller and the flow controller.
 
 Flow control is described in detail in {{flow-control}}, and congestion control
 is described in the companion document {{QUIC-RECOVERY}}.
@@ -1640,14 +1654,13 @@ waiting for a WINDOW_UPDATE which will never come.
 
 ### Mid-stream RST_STREAM
 
-On receipt of an RST_STREAM frame, an endpoint will tear down state for the
-ignore further data arriving on that stream.  This could result in the endpoints
-getting out of sync, since the RST_STREAM frame may have arrived out of order
-and there may be further bytes in flight.  The data sender would have counted
-the data against its connection level flow control budget, but a receiver that
-has not received these bytes would not know to include them as well.  The
-receiver must learn of the number of bytes that were sent on the stream to make
-the same adjustment in its connection flow controller.
+On receipt of a RST_STREAM frame, an endpoint will ignore further data arriving
+on that stream.  Since the RST_STREAM frame may have arrived out of order, there
+may be further bytes in flight.  The data sender would have counted the data
+against its connection level flow control budget, but a receiver that has not
+received these bytes would not know to include them as well.  The receiver must
+learn of the number of bytes that were sent on the stream to make the same
+adjustment in its connection flow controller.
 
 To avoid this de-synchronization, a RST_STREAM sender MUST include the final
 byte offset sent on the stream in the RST_STREAM frame.  On receiving a
@@ -1655,6 +1668,14 @@ RST_STREAM frame, a receiver definitively knows how many bytes were sent on that
 stream before the RST_STREAM frame, and the receiver MUST use the final offset
 to account for all bytes sent on the stream in its connection level flow
 controller.
+
+### Response to a RST_STREAM
+
+RST_STREAM terminates a stream abruptly.  Whether any action or response can or
+should be taken on the data already received is an application-specific issue.
+If the sender of a RST_STREAM wishes to explicitly state that no future data
+will be processed on related stream in the opposite direction, that endpoint MAY
+send REQUEST_RST frames  on the relevant streams at the same time.
 
 ### Offset Increment
 
