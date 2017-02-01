@@ -105,7 +105,8 @@ This document describes how QUIC can be secured using Transport Layer Security
 improvements for connection establishment over previous versions.  Absent packet
 loss, most new connections can be established and secured within a single round
 trip; on subsequent connections between the same client and server, the client
-can often send application data immediately, that is, zero round trip setup.
+can often send application data immediately, that is, using a zero round trip
+setup.
 
 This document describes how the standardized TLS 1.3 can act a security
 component of QUIC.  The same design could work for TLS 1.2, though few of the
@@ -195,12 +196,12 @@ exchange cannot be observed, modified, or forged.
 
 TLS features can be separated into two basic functions: an authenticated key
 exchange and record protection.  QUIC primarily uses the authenticated key
-exchange provided by TLS; QUIC provides its own packet protection.
+exchange provided by TLS but provides its own packet protection.
 
 The TLS authenticated key exchange occurs between two entities: client and
 server.  The client initiates the exchange and the server responds.  If the key
 exchange completes successfully, both client and server will agree on a secret.
-TLS supports both pre-shared key (PSK) and Diffie-Hellman (DH) key exchange.
+TLS supports both pre-shared key (PSK) and Diffie-Hellman (DH) key exchanges.
 PSK is the basis for 0-RTT; the latter provides perfect forward secrecy (PFS)
 when the DH keys are destroyed.
 
@@ -461,6 +462,40 @@ Get Handshake
 {: #exchange-summary title="Interaction Summary between QUIC and TLS"}
 
 
+## TLS Version
+
+This document describes how TLS 1.3 {{!I-D.ietf-tls-tls13}} is used with QUIC.
+
+In practice, the TLS handshake will negotiate a version of TLS to use.  This
+could result in a newer version of TLS than 1.3 being negotiated if both
+endpoints support that version.  This is acceptable provided that the features
+of TLS 1.3 that are used by QUIC are supported by the newer version.
+
+A badly configured TLS implementation could negotiate TLS 1.2 or another older
+version of TLS.  An endpoint MUST terminate the connection if a version of TLS
+older than 1.3 is negotiated.
+
+
+## Peer Authentication
+
+The requirements for authentication depend on the application protocol that is
+in use.  TLS provides server authentication and permits the server to request
+client authentication.
+
+A client MUST authenticate the identity of the server.  This typically involves
+verification that the identity of the server is included in a certificate and
+that the certificate is issued by a trusted entity (see for example
+{{?RFC2818}}).
+
+A server MAY request that the client authenticate during the handshake. A server
+MAY refuse a connection if the client is unable to authenticate when requested.
+The requirements for client authentication vary based on application protocol
+and deployment.
+
+A server MUST NOT use post-handshake client authentication (see Section 4.6.2 of
+{{!I-D.ietf-tls-tls13}}).
+
+
 # QUIC Packet Protection {#packet-protection}
 
 QUIC packet protection provides authenticated encryption of packets.  This
@@ -470,7 +505,7 @@ connection (see {{key-expansion}}).
 
 Different keys are used for QUIC packet protection and TLS record protection.
 Having separate QUIC and TLS record protection means that TLS records can be
-protected by two different keys.  This redundancy is limited to a only a few TLS
+protected by two different keys.  This redundancy is limited to only a few TLS
 records, and is maintained for the sake of simplicity.
 
 
@@ -550,7 +585,7 @@ keys.
 
 After a key update (see {{key-update}}), these secrets are updated using the
 HKDF-Expand-Label function defined in Section 7.1 of {{!I-D.ietf-tls-tls13}}.
-HKDF-Expand-Label uses the the PRF hash function negotiated by TLS.  The
+HKDF-Expand-Label uses the PRF hash function negotiated by TLS.  The
 replacement secret is derived using the existing Secret, a Label of "QUIC client
 1-RTT Secret" for the client and "QUIC server 1-RTT Secret" for the server, an
 empty HashValue, and the same output Length as the hash function selected by TLS

@@ -819,8 +819,8 @@ Connections should remain open until they become idle for a pre-negotiated
 period of time.  A QUIC connection, once established, can be terminated in one
 of three ways:
 
-1. Explicit Shutdown: An endpoint sends a CONNECTION_CLOSE frame to the peer
-   initiating a connection termination.  An endpoint may send a GOAWAY frame to
+1. Explicit Shutdown: An endpoint sends a CONNECTION_CLOSE frame to
+   initiate a connection termination.  An endpoint may send a GOAWAY frame to
    the peer prior to a CONNECTION_CLOSE to indicate that the connection will
    soon be terminated.  A GOAWAY frame signals to the peer that any active
    streams will continue to be processed, but the sender of the GOAWAY will not
@@ -902,8 +902,7 @@ A STREAM frame is shown below.
 
 The STREAM frame contains the following fields:
 
-* Stream ID: A variable-sized unsigned ID unique to this stream, whose size is
-  determined by the `SS` bits in the type byte.
+* Stream ID: A variable-sized unsigned ID unique to this stream.
 
 * Offset: A variable-sized unsigned number specifying the byte offset in the
   stream for the data in this STREAM frame.  The first byte in the stream has an
@@ -1316,9 +1315,6 @@ The frame is as follows:
 
 The fields of a GOAWAY frame are as follows:
 
-* Frame type: An 8-bit value that must be set to 0x03 specifying that this is a
-  GOAWAY frame.
-
 * Error Code: A 32-bit field error code which indicates the reason for closing
   this connection.
 
@@ -1387,9 +1383,9 @@ A receiver acknowledges receipt of a received packet by sending one or more ACK
 frames containing the packet number of the received packet.  To avoid perpetual
 acking between endpoints, a receiver MUST NOT generate an ack in response to
 every packet containing only ACK frames.  However, since it is possible that an
-endpoint sends only packets containing ACK frame (or other non-retransmittable
-frames), the receiving peer MAY send an ACK frame after a reasonable number
-(currently 20) of such packets have been received.
+endpoint might only send packets containing ACK frames (or other
+non-retransmittable frames), the receiving peer MAY send an ACK frame after a
+reasonable number (currently 20) of such packets have been received.
 
 Strategies and implications of the frequency of generating acknowledgments are
 discussed in more detail in {{QUIC-RECOVERY}}.
@@ -1704,10 +1700,10 @@ offset to determine the flow control offset to be advertised.
 Connection flow control is a limit to the total bytes of stream data sent in
 STREAM frames.  A receiver advertises credit for a connection by sending a
 WINDOW_UPDATE frame with the StreamID set to zero (0x00).  A receiver may
-maintain a cumulative sum of bytes received cumulatively on all streams to
-determine the value of the connection flow control offset to be advertised in
-WINDOW_UPDATE frames.  A sender may maintain a cumulative sum of stream data
-bytes sent to impose the connection flow control limit.
+maintain a cumulative sum of bytes received on all streams to determine the
+value of the connection flow control offset to be advertised in WINDOW_UPDATE
+frames.  A sender may maintain a cumulative sum of stream data bytes sent to
+impose the connection flow control limit.
 
 ## Edge Cases and Other Considerations
 
@@ -1769,7 +1765,7 @@ the receiving application consumes data, similar to common TCP implementations.
 If a sender does not receive a WINDOW_UPDATE frame when it has run out of flow
 control credit, the sender will be blocked and MUST send a BLOCKED frame.  A
 BLOCKED frame is expected to be useful for debugging at the receiver.  A
-receiver SHOULD NOT wait for a BLOCKED frame before sending with a
+receiver SHOULD NOT wait for a BLOCKED frame before sending a
 WINDOW_UPDATE, since doing so will cause at least one roundtrip of quiescence.
 For smooth operation of the congestion controller, it is generally considered
 best to not let the sender go into quiescence if avoidable.  To avoid blocking a
